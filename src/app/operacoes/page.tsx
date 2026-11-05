@@ -1,4 +1,4 @@
-import { Operations } from "@/components/screens/operations";
+import { redirect } from "next/navigation";
 export default function Page() {
-  return <Operations />;
+  redirect("/");
 }

@@ -5,7 +5,7 @@ export default function NotFound() {
       <h1>Página não encontrada</h1>
       <p>Esse endereço não faz parte da demonstração.</p>
       <Link className="button primary" href="/">
-        Voltar à visão geral
+        Voltar à prévia do Telegram
       </Link>
     </section>
   );

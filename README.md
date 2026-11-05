@@ -1,179 +1,121 @@
-# Núcleo Control
+# ServicesTelegram
 
-Protótipo navegável de um painel para servidores Windows e serviços TOTVS Protheus, com futura integração a um único bot do Telegram.
+Controle simples de serviços e consulta de atualizações dos servidores Windows **pelo Telegram**. A aplicação web serve apenas para configurar servidores, serviços e ações permitidas.
 
-**Esta entrega é uma demonstração.** Os servidores, nomes internos, usuários, pacotes e operações são fictícios. Não há bot conectado, agente Windows, execução remota, autenticação de produção nem acesso a uma API externa. Nenhum segredo é solicitado ou armazenado.
+O Protheus é apenas um dos serviços possíveis. Impressão, backup, integrações, bancos e outras aplicações usam o mesmo cadastro, sem regras ligadas a um ERP específico.
 
-## Executar localmente
+## Escopo desta versão
 
-Requisitos: Node.js 24 LTS e npm. As dependências estão travadas em `package-lock.json`.
+Este repositório contém um **protótipo navegável com dados e operações simulados**, não um bot conectado. Nenhum servidor real é consultado ou alterado.
+
+Há duas áreas:
+
+- **Telegram** (`/`): prévia da conversa, consulta de servidores e serviços, pedidos, confirmação, etapas e resultado. O histórico fica recolhido na mesma tela.
+- **Configuração** (`/configuracao`): inventário, pesquisa e liberação de ações por serviço e servidor. Esta área não oferece botões para iniciar ou parar serviços.
+
+Telegram e agentes reais, instalação de atualizações, IA, operações em lote e comandos livres ficam fora desta entrega. As antigas rotas do painel redirecionam para as duas áreas atuais.
+
+## Rodar localmente
+
+Requisitos: Node.js 24 LTS e npm.
 
 ```bash
 npm ci
 npm run dev
 ```
 
-Abra [http://127.0.0.1:3000](http://127.0.0.1:3000). O servidor de desenvolvimento escuta apenas no computador local. Para encerrar, use `Ctrl+C` no terminal.
-
-Para executar a compilação de produção:
-
-```bash
-npm run build
-npm start
-```
-
-Não é necessário configurar variáveis de ambiente, token do Telegram ou credenciais. O painel não carrega fontes ou imagens de serviços externos.
-
-## Validar
+Abra [http://127.0.0.1:3000](http://127.0.0.1:3000). Não é necessário informar token, credencial ou variável de ambiente. Para encerrar, use `Ctrl+C`.
 
 ```bash
 npm run typecheck
 npm test
 npm run build
+npm start
 ```
 
-Ou execute `npm run validate`. Os testes usam o executor nativo do Node com TypeScript via `tsx` e relógio controlado. Verificam permissões, expiração real e acelerada, uso único, conflitos, cancelamento, dependências, falha parcial, resultado desconhecido, reconciliação, observação desatualizada e restrições das buscas WUA.
+`npm run validate` reúne a checagem de tipos, os testes e a compilação. As dependências estão travadas em `package-lock.json`; o CI em `.github/workflows/ci.yml` executa a validação.
 
-O fluxo de CI em `.github/workflows/ci.yml` executa esses comandos nos envios e nas solicitações de alteração do repositório.
-
-## Navegação
-
-| Área                  | Rota            | Recursos                                                       |
-| --------------------- | --------------- | -------------------------------------------------------------- |
-| Visão geral           | `/`             | Indicadores derivados do estado, servidores, alertas e eventos |
-| Servidores            | `/servidores`   | Inventário, detalhes, comunicação e situação dos dados         |
-| Serviços              | `/servicos`     | Pesquisa, filtros, dez itens por página, ficha e ações         |
-| Atualizações          | `/atualizacoes` | Cache, consulta simulada e pacotes fictícios                   |
-| Operações e histórico | `/operacoes`    | Acompanhamento, cancelamento e laboratório de cenários         |
-| Telegram e mensagens  | `/telegram`     | Conversa interativa, modelo, nomes e atalho cadastrado         |
-| Acessos e políticas   | `/acessos`      | Perfis e matriz de concessões sem autoelevação                 |
-
-O cabeçalho mostra o contexto do servidor e o usuário de demonstração. O seletor de perfil permite simular Consulta, Operação e Administração. Todos podem consultar o inventário fictício; apenas Operação altera o AppServer de homologação. Administração não herda esse acesso.
-
-## Servidores demonstrativos
-
-- **ERP Homologação / SRV-HML-01:** um AppServer com ações autorizadas.
-- **ERP Produção / SRV-PRD-01:** somente consulta, com exemplo de reinicialização já pendente.
-- **ERP Filial / SRV-FIL-02:** sem comunicação; estados atuais desconhecidos e alterações bloqueadas.
-
-Os nomes internos terminados em `DEMO`, versões do Windows, IDs e KBs são ilustrativos. Nenhum desses registros é um inventário real. O documento `documentos/Planejamento_Bot_Telegram_Windows_Protheus.docx` é a referência funcional desta implementação.
-
-## Experimentar as operações
-
-1. Selecione o perfil **Operação**.
-2. Abra **Operações e histórico** e clique em **Preparar cenário**. A preparação restaura apenas o ambiente fictício de homologação, preservando o histórico e cancelando pedidos ainda não iniciados. Não executa operações reais.
-3. Escolha um dos seis cenários e clique em **Testar cenário selecionado**.
-4. Confira solicitante, servidor, ambiente, nomes, ação e impacto na confirmação.
-5. Confirme ou cancele. No cenário de expiração, use **Simular passagem de 61 segundos**, ou aguarde os 60 segundos reais.
-6. Acompanhe validação, parada, inicialização e verificação. A execução dura alguns segundos para permitir observar as etapas.
-
-Resultados reproduzíveis:
-
-| Cenário              | Resultado esperado                                                                 |
-| -------------------- | ---------------------------------------------------------------------------------- |
-| Operação concluída   | Parada, inicialização e estado final verificados; aplicação não verificada         |
-| Estado já solicitado | Iniciar serviço já em execução resulta em **Sem alteração**                        |
-| Dependência ativa    | Interrupção bloqueada na validação; serviço continua rodando                       |
-| Confirmação expirada | Nenhuma alteração; nova solicitação é necessária                                   |
-| Falha após a parada  | **Falha parcial**, com serviço parado e nenhuma nova tentativa                     |
-| Perda de comunicação | **Resultado desconhecido**, servidor bloqueado para alterações e nenhuma repetição |
-
-Em resultado desconhecido, **Reconciliar registro** consulta evidências fictícias do agente e informa o desfecho sem reenviar comandos. Uma solicitação pendente, em andamento ou sem resultado reconciliado impede outra alteração no servidor. Reiniciar serviço parado oferece uma nova solicitação de **Iniciar**, com confirmação própria. Cancelamento é permitido somente antes da execução e nunca é tratado como sucesso.
-
-## Dados recentes e estados
-
-- Heartbeat simulado de 30 segundos; comunicação vencida após 90 segundos.
-- A última comunicação e a observação do serviço são horários independentes.
-- Observações de serviços vencem após 90 segundos neste protótipo. Use **Consultar estados** para atualizá-las. O heartbeat não atualiza implicitamente o estado do serviço.
-- Serviço em execução e agente conectado não comprovam saúde do Protheus. Sem teste funcional, a indicação é **Serviço em execução; aplicação não verificada**.
-- Datas são formatadas em `America/Sao_Paulo`.
-
-## Windows Update
-
-As KBs `KB-DEMO-001` e `KB-DEMO-002` não são referências reais. A tela diferencia a previsão de reinício do pacote da pendência já observada na máquina.
-
-A busca simulada mantém cache de seis horas, intervalo mínimo de 30 minutos e uma busca ativa por máquina. Em produção, a origem configurada, incluindo WSUS, deverá ser respeitada. Sem comunicação, o resultado atual é desconhecido e os pacotes antigos permanecem identificados como desatualizados.
-
-Instalação, reinicialização do sistema e análise por IA são explicitamente futuras ou bloqueadas. Nenhuma pesquisa ou avaliação por IA é inventada.
-
-## Telegram e personalização
-
-A conversa permite selecionar servidor, categoria, serviço e ação e abrir a mesma confirmação usada no painel. O histórico e os estados são compartilhados, sem uma segunda execução independente.
-
-Modelos são apenas texto. Os campos `{servidor}`, `{ambiente}`, `{servico}`, `{acao}` e `{resultado}` são obrigatórios. Alterar nomes amigáveis mantém o nome interno visível. O atalho **reiniciar protheus homologacao** aponta exclusivamente para o AppServer de homologação e continua sujeito às permissões e à confirmação.
-
-Menus privados são a proposta inicial. Tópicos são uma alternativa futura de organização, sem isolamento de permissões. Não há campo de token real.
-
-## Persistência da demonstração
-
-`localStorage`, chave `protheus-control-demo-v1`, armazena somente preferências e dados fictícios: contexto, perfil, nomes, modelo e histórico. O painel continua em memória se o navegador impedir esse armazenamento. A simulação é individual por navegador; sincronização entre abas ou usuários não é implementada.
-
-**Restaurar demonstração**, no menu, limpa os dados fictícios após confirmação. Recarregar a página durante uma operação transforma o resultado em desconhecido e exige reconciliação; não reinicia a ação. As permissões reais nunca deverão ser confiadas a `localStorage` ou ao código do navegador.
-
-## Organização do código
+## Usar a conversa
 
 ```text
-src/
-  app/                  Rotas do App Router, layout e estilos
-  components/
-    screens/            As sete áreas do painel
-    demo-provider.tsx   Estado compartilhado e composição
-    operation-dialog.tsx
-    server-table.tsx
-    ui.tsx              Elementos reutilizáveis e diálogo acessível
-  domain/
-    types.ts            Modelos e identidades fictícias
-    permissions.ts      Regras da demonstração e prazos
-  data/seed.ts          Servidores, serviços e pacotes fictícios
-  services/
-    contract.ts         Contrato de acesso aos dados
-    mock-service.ts     Adaptador e máquina de estados simulada
-    index.ts            Ponto de substituição do adaptador
-  lib/format.ts         Datas, rótulos, mensagens e estados
-tests/                  Testes das regras e dos fluxos
+/servidores
+/servicos SRV-HML-01
+/atualizacoes SRV-HML-01
+Restart Service IntegracaoDemo in SRV-HML-01
+Stop Service IntegracaoDemo in SRV-HML-01
+Start Service IntegracaoDemo in SRV-HML-01
 ```
 
-## Substituir o adaptador por uma API
+Use o **nome interno Windows** do catálogo e o identificador do servidor. Nomes com espaços podem ser escritos entre aspas. Os botões da conversa geram esses comandos com o destino completo.
 
-O ponto de composição é `src/services/index.ts`. Os componentes consomem o contrato em `services/contract.ts` pelo provedor compartilhado, sem importar os registros fictícios. A exceção são as constantes públicas de apresentação, como os campos obrigatórios dos modelos.
+Essas frases são convertidas para ações cadastradas. Nunca viram PowerShell, CMD ou scripts. Formatos inválidos, destinos desconhecidos e ambiguidades são rejeitados.
 
-Na integração real, implemente um adaptador HTTP para buscar inventário, solicitar confirmação, confirmar, cancelar, acompanhar e reconciliar operações na API da central. Solicitação, confirmação e cancelamento já aceitam respostas assíncronas no contrato e nos chamadores. O adaptador real deverá aguardar respostas autenticadas da API, em vez de assumir uma alteração local. Não reproduza a execução da máquina de estados do mock no navegador. O estado exibido será derivado das respostas da central, por consultas periódicas ou outro canal autenticado.
+O pedido abre uma confirmação **na conversa**, válida por 60 segundos, de uso único e vinculada ao solicitante e à operação. Após confirmar, o bot simulado acompanha validação, parada, inicialização e verificação. Serviço rodando não comprova saúde da aplicação.
 
-A central será responsável por identidade real, concessões, prazos, idempotência, bloqueios, registros persistentes e resultados. O agente repetirá a autorização e as verificações locais. A sessão de demonstração e o seletor de perfis deverão ser substituídos por autenticação de produção. Uma integração por backend intermediário pode proteger a sessão; tokens administrativos e token do bot nunca devem ser enviados ao navegador.
+Solicitações só podem ser canceladas antes de iniciar. Operações conflitantes são bloqueadas. Resultado desconhecido exige reconciliação sem repetição automática. Reiniciar um serviço parado oferece uma nova solicitação de início.
 
-## Arquitetura fora da Vercel
+## Configurar quais serviços podem ser controlados
+
+1. Na configuração, selecione o servidor e pesquise o serviço.
+2. No seletor de **perfil de demonstração**, escolha Administração.
+3. Abra **Configurar** no serviço desejado.
+4. Marque somente Iniciar, Parar e/ou Reiniciar e informe o responsável.
+5. Em produção, confirme a liberação explícita daquele serviço.
+6. Salve e volte ao perfil Operação para usar a conversa.
+
+Não marcar ações deixa o serviço somente para consulta. É possível liberar somente Reiniciar, sem liberar os comandos individuais Start e Stop. Serviços novos entram bloqueados para alteração. Agente, antivírus, firewall e componentes críticos permanecem protegidos.
+
+Administração configura, mas não herda execução. Consulta não altera configurações ou serviços. Alterações de política são registradas e invalidam confirmações pendentes daquele serviço.
+
+Todos os servidores de produção começam somente para consulta. A liberação é individual por serviço e ação, nunca automática por categoria ou por nome.
+
+## Dados fictícios e persistência
+
+São três servidores, com serviços genéricos, incluindo um exemplo de TOTVS AppServer. O servidor da filial está sem comunicação. O conector de integrações de homologação começa com ações autorizadas para facilitar o teste.
+
+Heartbeat de 30 segundos e comunicação vencida após 90 segundos são parâmetros demonstrativos. A observação do serviço tem horário próprio. Use `/servicos <Servidor>` para consultá-la novamente. Não se guardam comandos para quando uma máquina voltar.
+
+As atualizações usam cache de seis horas, intervalo mínimo de 30 minutos e uma busca por máquina. KBs e pacotes são fictícios. A conversa separa a previsão de reinício do pacote da pendência já observada no servidor. Instalação e reinício do Windows estão desabilitados.
+
+A chave `nucleo-control-demo-v2` no `localStorage` contém apenas dados fictícios e preferências. A versão antiga do protótipo não é carregada por este modelo. **Restaurar** volta ao exemplo inicial. Se o navegador bloquear o armazenamento, a simulação funciona em memória. Datas usam `America/Sao_Paulo`.
+
+O seletor de perfis e as permissões no navegador servem à demonstração. Não são autenticação nem autorização de produção. A conversa é uma prévia local, não envia mensagens ao Telegram e não sincroniza abas ou usuários.
+
+## Estrutura
 
 ```text
-Navegador → painel Next.js na Vercel → API autenticada da central C#/.NET
-Agente Windows → consulta à API da central → recebe pedido → envia resultado
-Central → Telegram Bot API
+src/app/                         Páginas e estilos
+src/components/screens/telegram.tsx   Conversa de operação
+src/components/screens/services.tsx   Configuração de serviços
+src/components/service-policy-dialog.tsx
+src/domain/                      Tipos, comandos e permissões
+src/data/seed.ts                 Inventário fictício
+src/services/                    Contrato e adaptador simulado
+src/lib/format.ts                Datas e mensagens
+tests/                          Testes de comandos, políticas e operações
 ```
 
-O agente inicia todas as conexões, sem portas de entrada abertas nos servidores gerenciados. O navegador não acessa agentes diretamente. A API da central precisa estar acessível aos agentes por rede interna, VPN ou HTTPS autorizado.
+O ponto de substituição da simulação por uma API é `src/services/index.ts`. Na integração real, inventário, configuração, solicitação, confirmação e resultado serão fornecidos por uma central autenticada; a execução local do mock não deve ser reproduzida no navegador.
 
-Permanecem fora deste projeto e da hospedagem do painel na Vercel:
+## Próxima entrega operacional
 
-- Agentes Windows executados como serviços.
-- Controlador operacional em C#/.NET.
-- Consumidor permanente do long polling do Telegram e token do bot.
-- Banco operacional persistente, inclusive eventual SQLite local da central.
-- Certificados dos agentes, gestão de segredos e infraestrutura real.
+Para um primeiro piloto real, a prioridade é um usuário autorizado, um servidor e o comando de reinício de um serviço aprovado, com confirmação e resultado. Em seguida entram os outros serviços e as consultas de atualização. Não é necessário construir um painel operacional completo.
 
-## Enviar ao GitHub e importar na Vercel
+```text
+Operador no Telegram → Bot na central C#/.NET → pedido autorizado
+Agente Windows → consulta à API da central → executa ação → envia resultado
+Central → resultado ao operador no Telegram
+Web → configuração dos destinos e das permissões
+```
 
-O repositório deste projeto é [vtrzxy/ServicesTelegram](https://github.com/vtrzxy/ServicesTelegram). A publicação na Vercel é uma etapa separada, a ser realizada pelo responsável.
+O agente inicia a conexão por HTTPS; não há abertura de porta de entrada nos servidores gerenciados. A central precisa ter sua API acessível aos agentes. Bot, token, agentes e armazenamento operacional persistente ficam **fora da Vercel**. O navegador não acessa agentes nem recebe credenciais administrativas.
 
-1. Acesse o repositório `vtrzxy/ServicesTelegram` no GitHub e confirme as permissões de acesso da organização.
-2. Para atualizações futuras, revise as alterações, faça o commit e envie à branch correspondente. Inclua `package-lock.json`; não inclua `.next`, `node_modules`, `.local`, `.documento_tmp` ou arquivos `.env`.
-3. Na Vercel, escolha **Add New → Project** e importe o repositório pelo GitHub.
-4. Selecione **Next.js**, com a raiz na pasta que contém `package.json`.
-5. Use Node.js 24, instalação `npm ci` e compilação `npm run build`. Mantenha o diretório de saída padrão do Next.js. A demonstração não exige variáveis de ambiente.
-6. Publique a demonstração e valide as sete rotas, incluindo acesso direto e recarregamento. Pushes posteriores poderão gerar novas versões conforme a integração configurada.
+## GitHub e Vercel
 
-Não há necessidade de configurar um servidor Windows, webhook ou banco para hospedar esta demonstração.
+Repositório: [vtrzxy/ServicesTelegram](https://github.com/vtrzxy/ServicesTelegram).
 
-## Limites desta entrega
+Para hospedar esta demonstração na Vercel, importe o repositório, selecione Next.js, Node.js 24, instalação `npm ci` e compilação `npm run build`. Use o diretório de saída padrão. Não há variáveis de ambiente obrigatórias. A publicação não foi realizada por esta entrega.
 
-As regras no navegador demonstram o comportamento esperado; não fornecem segurança operacional real. O protótipo não mede consumo do futuro agente, não testa disponibilidade do ERP e não prova compatibilidade com versões reais do Windows ou do Protheus. Sessões, dependências, políticas e falhas são exemplos controlados.
+Inclua o arquivo de dependências travadas nos commits. Não envie `.next`, `node_modules`, `.local`, `.documento_tmp`, `entrega` nem arquivos `.env`.
 
-Referências oficiais para manutenção: [Next.js](https://nextjs.org/docs/app/getting-started/installation), [Tailwind CSS](https://tailwindcss.com/docs/installation/framework-guides/nextjs), [Next.js na Vercel](https://vercel.com/docs/frameworks/full-stack/nextjs).
+O documento Word em `documentos` registra o planejamento original. O escopo vigente deste protótipo é o descrito aqui: **Telegram para operar, web enxuta para configurar**, sem especialização em Protheus ou ERP.

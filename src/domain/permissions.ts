@@ -22,8 +22,11 @@ export function permission(
       allowed: false,
       reason: "Servidor sem comunicação. Nenhum comando será guardado para depois.",
     };
-  if (server.environment === "Produção")
-    return { allowed: false, reason: "Produção permanece somente para consulta." };
+  if (server.environment === "Produção" && !service.productionAllowed)
+    return {
+      allowed: false,
+      reason: "Este serviço de produção ainda não foi liberado explicitamente.",
+    };
   if (service.protected)
     return {
       allowed: false,
@@ -34,7 +37,7 @@ export function permission(
       allowed: false,
       reason: "Serviço recém-descoberto. Inventário não concede autorização.",
     };
-  if (service.shared || !service.manageable)
+  if (!service.allowedActions.includes(action))
     return { allowed: false, reason: "Serviço sem concessão operacional. Somente consulta." };
   if (state.role !== "operacao")
     return {
@@ -65,7 +68,7 @@ export function permission(
       reason: "Observação desatualizada. Consulte o estado antes de alterar.",
     };
   if (
-    action === "iniciar" &&
+    (action === "iniciar" || action === "reiniciar") &&
     service.dependencies.some((id) => state.services.find((s) => s.id === id)?.state !== "running")
   )
     return {
@@ -74,6 +77,9 @@ export function permission(
     };
   return {
     allowed: true,
-    reason: "Concessão explícita para Operação neste AppServer de homologação.",
+    reason: "Ação cadastrada e autorizada para o perfil Operação neste serviço e servidor.",
   };
+}
+export function policyLabel(service: WindowsService) {
+  return `POL-${service.id.toUpperCase()} · v${service.policyRevision}`;
 }

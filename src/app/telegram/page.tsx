@@ -1,4 +1,4 @@
-import { Telegram } from "@/components/screens/telegram";
+import { redirect } from "next/navigation";
 export default function Page() {
-  return <Telegram />;
+  redirect("/");
 }

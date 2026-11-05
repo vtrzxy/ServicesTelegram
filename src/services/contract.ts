@@ -1,4 +1,4 @@
-import { Action, DemoState, Operation, Role, Scenario } from "../domain/types";
+import { Action, DemoState, Operation, Role, Scenario, ServicePolicyInput } from "../domain/types";
 export interface DataService {
   getSnapshot(): DemoState;
   subscribe(listener: () => void): () => void;
@@ -20,6 +20,7 @@ export interface DataService {
   scan(serverId: string): Promise<void>;
   rename(serviceId: string, name: string): void;
   saveTemplate(template: string): void;
+  configureService(serviceId: string, policy: ServicePolicyInput): void;
   reset(): void;
   prepareScenario(): void;
 }

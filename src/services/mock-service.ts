@@ -5,13 +5,22 @@ import {
   CONFIRMATION_MS,
   HEARTBEAT_MS,
   permission,
+  policyLabel,
   SCAN_INTERVAL_MS,
 } from "../domain/permissions";
-import { Action, DemoState, Operation, Role, Scenario, USERS } from "../domain/types";
+import {
+  Action,
+  DemoState,
+  Operation,
+  Role,
+  Scenario,
+  ServicePolicyInput,
+  USERS,
+} from "../domain/types";
 import { DataService, DomainError } from "./contract";
 
 type Scheduler = (callback: () => void, delay: number) => unknown;
-const STORAGE_KEY = "protheus-control-demo-v1";
+const STORAGE_KEY = "nucleo-control-demo-v2";
 export class MockDataService implements DataService {
   private state: DemoState;
   private listeners = new Set<() => void>();
@@ -191,7 +200,7 @@ export class MockDataService implements DataService {
       expiresAt: now + CONFIRMATION_MS,
       message: "Aguardando confirmação. Nenhum comando executado.",
       impact: service.impact,
-      policyVersion: "POL-HML-001 · v1",
+      policyVersion: policyLabel(service),
       steps: steps.map((name) => ({ name, status: "waiting" })),
     };
     this.publish({
@@ -486,6 +495,91 @@ export class MockDataService implements DataService {
       );
     this.publish({ ...this.state, template });
   }
+  configureService(serviceId: string, policy: ServicePolicyInput) {
+    if (this.state.role !== "administracao")
+      throw new DomainError(
+        "Somente Administração pode configurar as ações permitidas. Isso não concede permissão de execução ao administrador.",
+      );
+    const service = this.state.services.find((s) => s.id === serviceId);
+    if (!service) throw new DomainError("Serviço não encontrado.");
+    if (service.protected)
+      throw new DomainError("Componente protegido. Não pode ser liberado nesta configuração.");
+    if (!policy.responsible?.trim() || policy.responsible.trim().length > 100)
+      throw new DomainError("Informe o responsável pela autorização, com até 100 caracteres.");
+    if (
+      !Array.isArray(policy.actions) ||
+      policy.actions.some((a) => !["iniciar", "parar", "reiniciar"].includes(a)) ||
+      new Set(policy.actions).size !== policy.actions.length
+    )
+      throw new DomainError(
+        "Somente as ações cadastradas Iniciar, Parar e Reiniciar são permitidas.",
+      );
+    const server = this.state.servers.find((s) => s.id === service.serverId)!;
+    if (server.environment === "Produção" && policy.actions.length > 0 && !policy.productionAllowed)
+      throw new DomainError("Confirme a liberação explícita deste serviço de produção.");
+    if (
+      this.state.operations.some(
+        (o) => o.serverId === service.serverId && ["running", "unknown"].includes(o.status),
+      )
+    )
+      throw new DomainError(
+        "Aguarde ou reconcilie a operação deste servidor antes de alterar sua política.",
+      );
+    const now = this.clock();
+    const revision = service.policyRevision + 1;
+    const actions = [...policy.actions];
+    const user = USERS[this.state.role];
+    this.publish({
+      ...this.state,
+      now,
+      services: this.state.services.map((s) =>
+        s.id === serviceId
+          ? {
+              ...s,
+              allowedActions: actions,
+              manageable: actions.length > 0,
+              discovered: actions.length > 0 ? false : s.discovered,
+              productionAllowed: policy.productionAllowed,
+              policyRevision: revision,
+              owner: policy.responsible.trim(),
+              window:
+                actions.length > 0
+                  ? "Janela de demonstração liberada pelo responsável"
+                  : "Nenhuma ação autorizada",
+            }
+          : s,
+      ),
+      operations: this.state.operations.map((o) =>
+        o.serviceId === serviceId && o.status === "pending"
+          ? {
+              ...o,
+              status: "blocked",
+              endedAt: now,
+              message:
+                "A política deste serviço foi alterada. A confirmação anterior foi invalidada; prepare uma nova solicitação.",
+            }
+          : o,
+      ),
+      policyAudit: [
+        {
+          id: `POL-${this.state.policyAudit.length + 1}`,
+          serviceId,
+          serverId: server.id,
+          serviceName: service.name,
+          hostname: server.hostname,
+          userId: user.id,
+          userName: user.name,
+          at: now,
+          before: [...service.allowedActions],
+          after: actions,
+          productionAllowed: policy.productionAllowed,
+          responsible: policy.responsible.trim(),
+          revision,
+        },
+        ...this.state.policyAudit,
+      ],
+    });
+  }
   reset() {
     this.epoch++;
     this.publish(createSeed(this.clock()));
@@ -531,7 +625,7 @@ function validStoredState(value: unknown): value is DemoState {
   if (!value || typeof value !== "object") return false;
   const state = value as DemoState;
   if (
-    state.version !== 1 ||
+    state.version !== 2 ||
     !Object.hasOwn(USERS, state.role) ||
     !Number.isFinite(state.now) ||
     !Number.isInteger(state.sequence) ||
@@ -546,6 +640,7 @@ function validStoredState(value: unknown): value is DemoState {
     !Array.isArray(state.services) ||
     !Array.isArray(state.operations) ||
     !Array.isArray(state.updates) ||
+    !Array.isArray(state.policyAudit) ||
     state.operations.length > 10000
   )
     return false;
@@ -571,13 +666,15 @@ function validStoredState(value: unknown): value is DemoState {
       (s) =>
         s &&
         seed.services.some(
-          (x) =>
-            x.id === s.id &&
-            x.serverId === s.serverId &&
-            x.manageable === s.manageable &&
-            x.protected === s.protected,
+          (x) => x.id === s.id && x.serverId === s.serverId && x.protected === s.protected,
         ) &&
         typeof s.name === "string" &&
+        Array.isArray(s.allowedActions) &&
+        s.allowedActions.every((a) => ["iniciar", "parar", "reiniciar"].includes(a)) &&
+        s.manageable === s.allowedActions.length > 0 &&
+        typeof s.productionAllowed === "boolean" &&
+        Number.isInteger(s.policyRevision) &&
+        s.policyRevision >= 1 &&
         ["running", "stopped", "unknown", "pending"].includes(s.state) &&
         Number.isFinite(s.observedAt) &&
         Array.isArray(s.dependencies),

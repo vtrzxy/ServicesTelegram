@@ -1,4 +1,4 @@
-import { Access } from "@/components/screens/access";
+import { redirect } from "next/navigation";
 export default function Page() {
-  return <Access />;
+  redirect("/configuracao");
 }

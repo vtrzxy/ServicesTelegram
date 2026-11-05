@@ -3,9 +3,12 @@ import { DemoProvider } from "@/components/demo-provider";
 import { AppShell } from "@/components/app-shell";
 import "./globals.css";
 export const metadata: Metadata = {
-  title: { default: "Núcleo · Controle de infraestrutura", template: "%s · Núcleo" },
+  title: {
+    default: "ServicesTelegram · Serviços dos servidores",
+    template: "%s · ServicesTelegram",
+  },
   description:
-    "Demonstração de gerenciamento de serviços Windows e TOTVS Protheus. Dados e operações simulados.",
+    "Operação de serviços Windows pelo Telegram, com configuração web de servidores e ações. Demonstração com dados simulados.",
   robots: { index: false, follow: false },
 };
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

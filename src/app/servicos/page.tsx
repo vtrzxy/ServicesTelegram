@@ -1,4 +1,4 @@
-import { Services } from "@/components/screens/services";
+import { redirect } from "next/navigation";
 export default function Page() {
-  return <Services />;
+  redirect("/configuracao");
 }

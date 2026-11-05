@@ -1,4 +1,4 @@
-import { Servers } from "@/components/screens/servers";
+import { redirect } from "next/navigation";
 export default function Page() {
-  return <Servers />;
+  redirect("/configuracao");
 }

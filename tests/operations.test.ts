@@ -281,3 +281,97 @@ test("perda de comunicação durante busca preserva cache e não informa sucesso
   assert.equal(h.service.getSnapshot().servers[0].scanState, "error");
   assert.equal(h.service.getSnapshot().servers[0].lastScan, lastScan);
 });
+
+test("administração libera somente reiniciar para um serviço genérico", () => {
+  const h = harness();
+  h.service.setRole("administracao");
+  h.service.configureService("hml-backup", {
+    actions: ["reiniciar"],
+    productionAllowed: false,
+    responsible: "Infraestrutura",
+  });
+  assert.throws(() => h.service.request("hml-backup", "reiniciar"), /Administração/);
+  h.service.setRole("operacao");
+  assert.throws(() => h.service.request("hml-backup", "parar"));
+  assert.throws(() => h.service.request("hml-backup", "iniciar"));
+  const id = h.service.request("hml-backup", "reiniciar", "success", "Telegram");
+  h.service.confirm(id);
+  h.advance(3300);
+  assert.equal(h.operation(id).status, "completed");
+  assert.equal(h.operation(id).source, "Telegram");
+  assert.equal(h.service.getSnapshot().policyAudit.length, 1);
+});
+test("produção exige liberação explícita por serviço e ação", () => {
+  const h = harness();
+  h.service.setRole("administracao");
+  assert.throws(
+    () =>
+      h.service.configureService("prd-backup", {
+        actions: ["reiniciar"],
+        productionAllowed: false,
+        responsible: "Infra",
+      }),
+    /explicitamente|explícita/,
+  );
+  h.service.configureService("prd-backup", {
+    actions: ["reiniciar"],
+    productionAllowed: true,
+    responsible: "Infra",
+  });
+  h.service.setRole("operacao");
+  const id = h.service.request("prd-backup", "reiniciar");
+  h.service.confirm(id);
+  h.advance(3300);
+  assert.equal(h.operation(id).status, "completed");
+  assert.throws(() => h.service.request("prd-app", "reiniciar"));
+});
+test("somente administração configura; serviços protegidos e comandos livres não são liberados", () => {
+  const h = harness();
+  const policy = {
+    actions: ["reiniciar" as const],
+    productionAllowed: false,
+    responsible: "Infra",
+  };
+  assert.throws(() => h.service.configureService("hml-backup", policy));
+  h.service.setRole("administracao");
+  assert.throws(() => h.service.configureService("hml-agent", policy), /protegido/);
+  assert.throws(
+    () => h.service.configureService("hml-backup", { ...policy, actions: ["powershell" as never] }),
+    /cadastradas/,
+  );
+});
+test("alterar política invalida confirmações pendentes e revogar ações volta à consulta", () => {
+  const h = harness();
+  const id = h.service.request("hml-app", "reiniciar");
+  h.service.setRole("administracao");
+  h.service.configureService("hml-app", {
+    actions: [],
+    productionAllowed: false,
+    responsible: "Infra",
+  });
+  h.service.setRole("operacao");
+  assert.equal(h.operation(id).status, "blocked");
+  assert.throws(() => h.service.confirm(id));
+  assert.throws(() => h.service.request("hml-app", "reiniciar"));
+});
+test("configuração de ações sobrevive ao recarregamento", () => {
+  const values = new Map<string, string>();
+  const storage = {
+    getItem: (key: string) => values.get(key) || null,
+    setItem: (key: string, value: string) => values.set(key, value),
+  } as unknown as Storage;
+  const first = new MockDataService();
+  first.initialize(storage);
+  first.setRole("administracao");
+  first.configureService("prd-backup", {
+    actions: ["reiniciar"],
+    productionAllowed: true,
+    responsible: "Infra",
+  });
+  const second = new MockDataService();
+  second.initialize(storage);
+  const service = second.getSnapshot().services.find((s) => s.id === "prd-backup")!;
+  assert.deepEqual(service.allowedActions, ["reiniciar"]);
+  assert.equal(service.productionAllowed, true);
+  assert.equal(second.getSnapshot().policyAudit.length, 1);
+});

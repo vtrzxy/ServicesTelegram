@@ -1,4 +1,4 @@
-import { Updates } from "@/components/screens/updates";
+import { redirect } from "next/navigation";
 export default function Page() {
-  return <Updates />;
+  redirect("/");
 }

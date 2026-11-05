@@ -1,8 +1,8 @@
 {
-  "name": "painel-protheus-demo",
-  "version": "1.0.0",
+  "name": "services-telegram-demo",
+  "version": "1.1.0",
   "private": true,
-  "description": "Protótipo navegável de gerenciamento Windows e Protheus com operações simuladas",
+  "description": "Protótipo enxuto de operação de serviços Windows pelo Telegram com configuração web",
   "engines": {
     "node": ">=22.0.0"
   },

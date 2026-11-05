@@ -5,55 +5,54 @@ export const TEMPLATE_FIELDS = ["servidor", "ambiente", "servico", "acao", "resu
 export function createSeed(now: number): DemoState {
   const services: WindowsService[] = [];
   const definitions = [
-    ["app", "AppServer ERP", "TOTVS_AppServer_ERP_DEMO", "Protheus", "running"],
-    ["db", "DBAccess compartilhado", "TOTVS_DBAccess_DEMO", "Protheus", "running"],
-    ["broker", "Broker de conexões", "TOTVS_Broker_DEMO", "Protheus", "running"],
-    ["license", "License Server", "TOTVS_License_DEMO", "Protheus", "running"],
-    ["tss", "TSS fiscal", "TOTVS_TSS_DEMO", "Fiscal", "stopped"],
-    ["schedule", "Schedule de rotinas", "TOTVS_Schedule_DEMO", "Protheus", "running"],
-    ["rest", "Integrações REST", "TOTVS_REST_DEMO", "Integrações", "running"],
-    ["job", "Processamento de relatórios", "ERP_Relatorios_DEMO", "Integrações", "stopped"],
-    ["new", "Serviço descoberto", "NovoServico_DEMO", "Outros", "stopped"],
-    ["agent", "Agente de gerenciamento", "ControleAgente_DEMO", "Sistema", "running"],
-    ["firewall", "Firewall do Windows", "FirewallIlustrativo_DEMO", "Segurança", "running"],
-    ["defender", "Proteção do servidor", "AntivirusIlustrativo_DEMO", "Segurança", "running"],
-    ["event", "Registro de eventos", "EventosIlustrativo_DEMO", "Sistema", "running"],
-    ["backup", "Backup corporativo", "BackupIlustrativo_DEMO", "Outros", "running"],
+    ["app", "Conector de integrações", "IntegracaoDemo", "Aplicações", "running"],
+    ["db", "Banco de dados da aplicação", "PostgreSQLDemo", "Banco de dados", "running"],
+    ["broker", "Gateway de aplicações", "GatewayDemo", "Web", "running"],
+    ["license", "Compartilhamento de arquivos", "ArquivosDemo", "Arquivos", "running"],
+    ["tss", "Fila de impressão", "SpoolerDemo", "Impressão", "stopped"],
+    ["schedule", "Agendador de rotinas", "AgendadorDemo", "Rotinas", "running"],
+    ["rest", "Servidor web", "WebServiceDemo", "Web", "running"],
+    ["job", "Sincronização de arquivos", "SincronizacaoDemo", "Arquivos", "stopped"],
+    ["new", "Serviço descoberto", "NovoServicoDemo", "Outros", "stopped"],
+    ["agent", "Agente de gerenciamento", "ControleAgenteDemo", "Sistema", "running"],
+    ["firewall", "Firewall do Windows", "FirewallIlustrativoDemo", "Segurança", "running"],
+    ["defender", "Proteção do servidor", "AntivirusIlustrativoDemo", "Segurança", "running"],
+    ["event", "Registro de eventos", "EventosIlustrativoDemo", "Sistema", "running"],
+    ["backup", "Backup corporativo", "BackupDemo", "Backup", "running"],
+    ["protheus", "TOTVS AppServer", "TOTVSAppServerDemo", "Aplicações", "running"],
   ];
-  for (const [index, serverId] of ["hml", "prd", "off"].entries()) {
-    for (const [key, name, internalName, category, serviceState] of definitions.slice(
-      0,
-      index === 0 ? 14 : 7,
-    )) {
+  for (const serverId of ["hml", "prd", "off"]) {
+    for (const [key, name, internalName, category, serviceState] of definitions) {
       services.push({
         id: `${serverId}-${key}`,
         serverId,
-        name:
-          key === "app"
-            ? `AppServer ${index === 0 ? "Homologação" : index === 1 ? "Produção" : "Filial"}`
-            : name,
+        name,
         internalName,
         category,
         state: serviceState as WindowsService["state"],
         observedAt: now - (serverId === "off" ? 8 * 60_000 : 12_000),
         health: serverId === "off" ? "unknown" : "unverified",
         manageable: serverId === "hml" && key === "app",
+        allowedActions:
+          serverId === "hml" && key === "app" ? ["iniciar", "parar", "reiniciar"] : [],
+        productionAllowed: false,
+        policyRevision: 1,
         protected: ["agent", "firewall", "defender", "event"].includes(key),
         discovered: key === "new",
         shared: ["db", "broker", "license"].includes(key),
         dependencies: key === "app" ? [`${serverId}-db`, `${serverId}-license`] : [],
         impact:
           key === "app"
-            ? "Interrompe as conexões e rotinas atendidas por esta instância do AppServer."
-            : "O impacto depende dos consumidores deste componente. Alteração não autorizada.",
-        owner: "Equipe de ERP · responsável fictício",
+            ? "Interrompe as integrações atendidas por este serviço até a conclusão da operação."
+            : "Interrompe os consumidores deste serviço. Avalie dependências e a janela antes de autorizar.",
+        owner: "Equipe de infraestrutura · responsável fictício",
         window: "Homologação: janela de demonstração liberada",
-        success: "Observar o estado final no Windows. Teste funcional do ERP não cadastrado.",
+        success: "Observar o estado final no Windows. Teste funcional da aplicação não cadastrado.",
       });
     }
   }
   return {
-    version: 1,
+    version: 2,
     now,
     role: "operacao",
     selectedServerId: "hml",
@@ -63,7 +62,7 @@ export function createSeed(now: number): DemoState {
     servers: [
       {
         id: "hml",
-        name: "ERP Homologação",
+        name: "Servidor de testes",
         hostname: "SRV-HML-01",
         environment: "Homologação",
         windows: "Windows Server 2022 · build 20348 · fictício",
@@ -76,7 +75,7 @@ export function createSeed(now: number): DemoState {
       },
       {
         id: "prd",
-        name: "ERP Produção",
+        name: "Servidor de aplicações",
         hostname: "SRV-PRD-01",
         environment: "Produção",
         windows: "Windows Server 2025 · build 26100 · fictício",
@@ -89,7 +88,7 @@ export function createSeed(now: number): DemoState {
       },
       {
         id: "off",
-        name: "ERP Filial",
+        name: "Servidor da filial",
         hostname: "SRV-FIL-02",
         environment: "Produção",
         windows: "Windows Server 2019 · build 17763 · fictício",
@@ -136,5 +135,6 @@ export function createSeed(now: number): DemoState {
       },
     ]),
     operations: [],
+    policyAudit: [],
   };
 }

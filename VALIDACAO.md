@@ -5,30 +5,29 @@ Data: 5 de novembro de 2026.
 ## Verificações concluídas
 
 - `npm run typecheck`: concluído sem erros.
-- `npm test`: 23 testes aprovados, sem falhas.
-- `npm run build`: compilação de produção concluída; sete rotas funcionais geradas.
-- Dependências instaladas com arquivo de versões travadas.
-- Interface revisada em computador com largura de 1.440 px e celular com largura de 390 px.
-- Rolagem das tabelas contida no componente, sem ampliar a página no celular.
+- `npm test`: 31 testes aprovados, sem falhas.
+- `npm run build`: compilação de produção concluída.
+- Duas áreas visíveis: conversa do Telegram e configuração de serviços. As rotas antigas redirecionam para essas áreas.
+- Interface revisada em computador com largura de 1.440 px e celular com largura de 390 px, sem transbordamento horizontal da página.
+- Configuração sem botões para executar ações nos serviços.
 
 ## Fluxos verificados
 
-- Pesquisa do catálogo por nome, bloqueio do DBAccess e dos componentes protegidos.
-- Produção somente para consulta e Administração sem herança de operação.
-- Confirmação com solicitante, chat, destino, ambiente, ação e prazo.
-- Reinício acompanhado até o estado final, com aplicação não verificada.
-- Operação sem alteração, dependência ativa, expiração, cancelamento e falha parcial.
-- Perda de comunicação, bloqueio de novas alterações e reconciliação sem reenvio.
-- Persistência do histórico após recarregamento.
-- Fluxo de seleção no Telegram abrindo a mesma confirmação do painel.
-- Rejeição de modelos sem campos essenciais.
-- Consulta de atualizações, cache e bloqueio de nova busca pelo intervalo mínimo.
-- Navegação pelo menu móvel e leitura das políticas sem controles de autoelevação.
+- Consulta de serviços pelo chat, comando de reinício, confirmação na própria conversa, etapas e resultado final.
+- Comandos com nome interno do serviço e servidor explícitos; rejeição de comandos livres, destinos desconhecidos e ambiguidades.
+- Liberação de um serviço genérico somente para Reiniciar, sem liberar Iniciar ou Parar.
+- Produção bloqueada inicialmente e liberação explícita por serviço e ação. Tentativa sem confirmação exibe erro no formulário.
+- Reinício autorizado de backup em produção concluído na simulação; comando de parada recusado pela política.
+- Administração configura sem herdar execução; componentes protegidos permanecem bloqueados.
+- Alteração de política registrada, persistência da configuração e invalidação de confirmações pendentes.
+- Consulta de atualizações no chat com fonte, horário, cache, pacotes fictícios e indicação de reinício.
 
-Os testes automatizados também verificam repetição de confirmações, conflitos, troca de solicitante, observação desatualizada, reinício de serviço parado, recarregamento durante execução e recuperação de buscas interrompidas.
+Os testes automatizados também cobrem confirmação de uso único, conflito por servidor, troca de solicitante, observação desatualizada, dependências, cancelamento, expiração, falha parcial, perda de comunicação, reconciliação sem reenvio, recarregamento durante execução e recuperação de consultas interrompidas.
 
 ## Limites
 
-Esta validação cobre a demonstração local e sua compilação. Não houve implantação na Vercel, teste de API real, autenticação de produção, integração com Telegram ou instalação de agente. Não há certificação de acessibilidade; foram implementados rótulos, foco visível, diálogo nativo, navegação por teclado e adaptação de layout. Sincronização entre abas e usuários não faz parte desta versão.
+Esta validação cobre o protótipo local. Não houve implantação na Vercel, integração com Telegram real, autenticação de produção, API operacional ou instalação de agente. O seletor de perfis não representa autorização de produção. Nenhum serviço real foi alterado.
 
-As prévias na pasta de entrega mostram dados fictícios. As instruções de execução e publicação futura estão no README.
+A conversa é uma prévia local. O histórico de operações e as configurações usam armazenamento do navegador; as mensagens da conversa não persistem ao navegar. Não há sincronização entre abas ou usuários. Instalação de atualizações e reinício do Windows ficam fora desta versão.
+
+Não há certificação de acessibilidade. Foram implementados rótulos, foco visível, diálogo nativo e adaptação de layout. As imagens em `entrega` mostram apenas dados fictícios.

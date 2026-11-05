@@ -43,6 +43,9 @@ export interface WindowsService {
   observedAt: number;
   health: "unverified" | "unknown";
   manageable: boolean;
+  allowedActions: Action[];
+  productionAllowed: boolean;
+  policyRevision: number;
   protected: boolean;
   discovered: boolean;
   shared: boolean;
@@ -96,7 +99,7 @@ export interface Operation {
   policyVersion: string;
 }
 export interface DemoState {
-  version: 1;
+  version: 2;
   now: number;
   role: Role;
   selectedServerId: string;
@@ -106,6 +109,27 @@ export interface DemoState {
   operations: Operation[];
   template: string;
   sequence: number;
+  policyAudit: PolicyChange[];
+}
+export interface PolicyChange {
+  id: string;
+  serviceId: string;
+  serverId: string;
+  serviceName: string;
+  hostname: string;
+  userId: number;
+  userName: string;
+  at: number;
+  before: Action[];
+  after: Action[];
+  productionAllowed: boolean;
+  responsible: string;
+  revision: number;
+}
+export interface ServicePolicyInput {
+  actions: Action[];
+  productionAllowed: boolean;
+  responsible: string;
 }
 export interface Permission {
   allowed: boolean;

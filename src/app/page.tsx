@@ -1,4 +1,4 @@
-import { Overview } from "@/components/screens/overview";
+import { Telegram } from "@/components/screens/telegram";
 export default function Page() {
-  return <Overview />;
+  return <Telegram />;
 }
