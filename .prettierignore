@@ -1,0 +1,7 @@
+node_modules
+.next
+.local
+.documento_tmp
+documentos
+entrega
+package-lock.json
