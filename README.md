@@ -1,121 +1,113 @@
 # ServicesTelegram
 
-Controle simples de serviços e consulta de atualizações dos servidores Windows **pelo Telegram**. A aplicação web serve apenas para configurar servidores, serviços e ações permitidas.
+Primeiro fluxo operacional: **agente Python no Windows → central no Mac → inventário web**. O agente lista os serviços locais e envia o inventário a cada 30 segundos. A web mostra nome, nome interno, estado, inicialização, sistema e horários da coleta e do recebimento.
 
-O Protheus é apenas um dos serviços possíveis. Impressão, backup, integrações, bancos e outras aplicações usam o mesmo cadastro, sem regras ligadas a um ERP específico.
+Esta etapa é somente leitura. O agente não recebe comandos, não para serviços e não consulta atualizações. A operação pelo Telegram continua como objetivo do projeto; a prévia anterior fica separada em `/telegram` e usa dados fictícios.
 
-## Escopo desta versão
+## Testar com o Mac e um laptop Windows
 
-Este repositório contém um **protótipo navegável com dados e operações simulados**, não um bot conectado. Nenhum servidor real é consultado ou alterado.
+Requisitos na central: Node.js 24 e npm. No Windows: Python 3.10+ de 64 bits e Windows PowerShell com `Get-CimInstance` (normalmente PowerShell 5.1). Não há dependências Python para instalar. Use uma versão do Python compatível com seu Windows e com suporte do fornecedor.
 
-Há duas áreas:
+1. No Mac, entre nesta pasta e execute `npm ci` se as dependências ainda não estiverem instaladas.
+2. Descubra o IP do Mac na mesma rede do Windows, nas configurações de rede do macOS.
+3. Gere a central e o pacote do primeiro agente, substituindo o IP:
 
-- **Telegram** (`/`): prévia da conversa, consulta de servidores e serviços, pedidos, confirmação, etapas e resultado. O histórico fica recolhido na mesma tela.
-- **Configuração** (`/configuracao`): inventário, pesquisa e liberação de ações por serviço e servidor. Esta área não oferece botões para iniciar ou parar serviços.
+   ```bash
+   npm run central:setup -- --agent srv-windows-01 --url http://192.168.1.10:3000 --allow-http
+   ```
 
-Telegram e agentes reais, instalação de atualizações, IA, operações em lote e comandos livres ficam fora desta entrega. As antigas rotas do painel redirecionam para as duas áreas atuais.
+   O IP acima é apenas um exemplo: substitua pelo IP do Mac. Cada novo Windows deve ter um identificador próprio. O comando não substitui um agente existente.
 
-## Rodar localmente
+4. Inicie a central para os dispositivos da rede:
 
-Requisitos: Node.js 24 LTS e npm.
+   ```bash
+   npm run build
+   npm run start:lan
+   ```
 
-```bash
-npm ci
-npm run dev
+   Para desenvolver, use `npm run dev:lan`. Não execute os dois na mesma porta. `npm run dev` e `npm start` aceitam apenas conexões da própria máquina; os comandos com `:lan` escutam na rede.
+
+5. No Mac, abra [http://127.0.0.1:3000](http://127.0.0.1:3000). Copie a chave do arquivo `.local/central/dashboard-key.txt` para o acesso da dashboard. Ela fica apenas na memória da aba: ao recarregar, informe novamente.
+6. Copie a pasta inteira `.local/central/packages/srv-windows-01` para o Windows, por exemplo `C:\ServicesTelegram`. Ela já contém `agent.py`, `agent.json`, `iniciar.cmd` e instruções.
+7. No terminal do Windows, nessa pasta, faça um primeiro envio:
+
+   ```powershell
+   py -3 agent.py --once
+   ```
+
+8. Para manter os envios, execute `py -3 agent.py` e mantenha o terminal aberto, ou abra `iniciar.cmd`. A dashboard recebe os dados automaticamente. Se não existir o comando `py`, use `python` ou o caminho completo de `python.exe`.
+
+Os dois computadores precisam alcançar a central pela rede. Redes de convidados ou isolamento entre dispositivos podem impedir isso. Se o macOS solicitar acesso de rede ao Node, permita apenas o necessário para esse teste. Não é necessário abrir porta de entrada no laptop Windows. A central precisa ficar ligada, sem suspensão e com a porta 3000 acessível na rede de teste.
+
+HTTP com `--allow-http` é uma opção explícita apenas para piloto em rede confiável: inventário e chave trafegam sem criptografia. Para outras redes, coloque a central atrás de HTTPS com certificado válido e gere o pacote com a URL HTTPS, sem `--allow-http`. O agente valida certificados e recusa redirecionamentos.
+
+## O que aparece na dashboard
+
+- Agentes cadastrados, inclusive os que ainda aguardam o primeiro envio.
+- Hostname e sistema informado pelo Windows.
+- Lista de todos os serviços retornados por `Win32_Service`, com pesquisa, filtro de estado e paginação de 50 itens.
+- Quantidades de serviços, em execução, parados e automáticos parados, conforme a coleta.
+- Horário da coleta no Windows e do recebimento na central, apresentados em `America/Sao_Paulo`.
+- Último inventário preservado quando o agente deixa de enviar. Após três intervalos, com mínimo de 90 segundos, os estados passam a ser apresentados como históricos.
+
+A web consulta a central a cada 10 segundos. **Atualizar web** consulta o último inventário; não força uma coleta remota. Serviço parado pode ser normal, e serviço em execução não comprova saúde da aplicação. Falha de coleta não é enviada como uma lista vazia.
+
+## Chaves e armazenamento
+
+A preparação cria dados locais ignorados pelo Git:
+
+```text
+.local/central/
+  registry.json                 Hashes das chaves e agentes cadastrados
+  dashboard-key.txt             Chave de leitura da dashboard
+  inventory/<agente>.json       Último inventário recebido de cada agente
+  packages/<agente>/            Pasta para copiar ao respectivo Windows
 ```
 
-Abra [http://127.0.0.1:3000](http://127.0.0.1:3000). Não é necessário informar token, credencial ou variável de ambiente. Para encerrar, use `Ctrl+C`.
+A central guarda hashes das chaves no cadastro. O pacote contém a chave original do agente, e o arquivo da dashboard contém sua chave de leitura. Restrinja o acesso a essas pastas. Não envie `.local`, `agent.json`, chaves ou pacotes configurados para o GitHub.
+
+Cada agente só pode enviar inventário para seu próprio identificador. A chave da dashboard só consulta; não cadastra agentes nem envia inventário. Não há chave no código ou variável `NEXT_PUBLIC_*`. Para revogar um agente neste piloto, pare a central, remova sua entrada de `registry.json` e inicie novamente; não reutilize o identificador sem tratar também seu último inventário.
+
+Os snapshots são gravados por substituição atômica em disco. Reiniciar a central mantém os inventários. Não há banco externo, histórico de coletas, múltiplas instâncias, edição de servidores pela web ou sincronização de cadastros nesta etapa. Para usar outro diretório persistente, configure `INVENTORY_DATA_DIR` tanto na preparação quanto na execução da central.
+
+Nunca use a mesma configuração em dois computadores. Para outro servidor:
+
+```bash
+npm run central:setup -- --agent srv-windows-02 --url http://IP-DO-MAC:3000 --allow-http
+```
+
+Para outro endereço/porta da mesma central, atualize `controllerUrl` nos arquivos `agent.json` distribuídos. O cadastro existente e as chaves continuam válidos. A porta pode ser alterada ao iniciar com `npm run start:lan -- --port 3001`.
+
+## Agente Windows
+
+O agente usa a biblioteca padrão do Python e chama um comando fixo de consulta local do PowerShell. Não usa `shell=True`, não muda a política de execução e não instala software. Campos coletados: hostname, sistema, nome do serviço, nome de exibição, estado e modo de inicialização. Conta do serviço, senha, caminho do executável e linha de comando não são coletados.
+
+Não há instalação automática como serviço Windows neste primeiro piloto. As instruções do pacote explicam execução em console e a opção de configurar uma tarefa depois de validar a coleta. Logs locais têm rotação e não registram chaves. Falhas são tentadas novamente no próximo ciclo, sempre com uma coleta nova e sem fila acumulada.
+
+A coleta real precisa ser validada no Windows de destino. Os testes no Mac cobrem validação, transporte, armazenamento, apresentação e comportamento do agente com a coleta substituída por dados de teste; não provam a consulta CIM no Windows.
+
+Referências: [Win32_Service da Microsoft](https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-service) e [cliente HTTP da biblioteca padrão do Python](https://docs.python.org/3/library/urllib.request.html).
+
+## API local
+
+- `POST /api/agent/inventory`: chave exclusiva do agente no cabeçalho `Authorization: Bearer ...` e corpo JSON versionado. Aceita até 2 MiB e 5.000 serviços, valida campos e ignora atributos extras. Substitui o snapshot completo.
+- `GET /api/inventory`: chave de leitura da dashboard no mesmo cabeçalho. Inclui agentes que ainda não enviaram inventário. Não retorna hashes nem chaves.
+
+Não há endpoint de execução remota. A central usa Node e disco persistente; **este fluxo não é adequado a hospedagem estática ou armazenamento efêmero da Vercel**. Não publique esta central de piloto diretamente na internet.
+
+## Demonstração anterior do Telegram
+
+`/telegram` e `/configuracao` preservam o protótipo de comandos, confirmação e políticas com dados fictícios. O perfil de demonstração não autentica a central real. As configurações simuladas não se aplicam aos agentes Python. Restaurar a demonstração não apaga os inventários reais. O bot ainda não está conectado.
+
+## Validar o projeto
 
 ```bash
 npm run typecheck
 npm test
 npm run build
-npm start
+python3 -m unittest discover -s agent/windows -p 'test_*.py' -v
 ```
 
-`npm run validate` reúne a checagem de tipos, os testes e a compilação. As dependências estão travadas em `package-lock.json`; o CI em `.github/workflows/ci.yml` executa a validação.
+No Windows, use `py -3` no lugar de `python3`. O CI executa as verificações de Node e Python sem coletar serviços do computador de teste. `npm run validate` reúne tipos, testes de Node e compilação. Dependências Node estão travadas no `package-lock.json`.
 
-## Usar a conversa
-
-```text
-/servidores
-/servicos SRV-HML-01
-/atualizacoes SRV-HML-01
-Restart Service IntegracaoDemo in SRV-HML-01
-Stop Service IntegracaoDemo in SRV-HML-01
-Start Service IntegracaoDemo in SRV-HML-01
-```
-
-Use o **nome interno Windows** do catálogo e o identificador do servidor. Nomes com espaços podem ser escritos entre aspas. Os botões da conversa geram esses comandos com o destino completo.
-
-Essas frases são convertidas para ações cadastradas. Nunca viram PowerShell, CMD ou scripts. Formatos inválidos, destinos desconhecidos e ambiguidades são rejeitados.
-
-O pedido abre uma confirmação **na conversa**, válida por 60 segundos, de uso único e vinculada ao solicitante e à operação. Após confirmar, o bot simulado acompanha validação, parada, inicialização e verificação. Serviço rodando não comprova saúde da aplicação.
-
-Solicitações só podem ser canceladas antes de iniciar. Operações conflitantes são bloqueadas. Resultado desconhecido exige reconciliação sem repetição automática. Reiniciar um serviço parado oferece uma nova solicitação de início.
-
-## Configurar quais serviços podem ser controlados
-
-1. Na configuração, selecione o servidor e pesquise o serviço.
-2. No seletor de **perfil de demonstração**, escolha Administração.
-3. Abra **Configurar** no serviço desejado.
-4. Marque somente Iniciar, Parar e/ou Reiniciar e informe o responsável.
-5. Em produção, confirme a liberação explícita daquele serviço.
-6. Salve e volte ao perfil Operação para usar a conversa.
-
-Não marcar ações deixa o serviço somente para consulta. É possível liberar somente Reiniciar, sem liberar os comandos individuais Start e Stop. Serviços novos entram bloqueados para alteração. Agente, antivírus, firewall e componentes críticos permanecem protegidos.
-
-Administração configura, mas não herda execução. Consulta não altera configurações ou serviços. Alterações de política são registradas e invalidam confirmações pendentes daquele serviço.
-
-Todos os servidores de produção começam somente para consulta. A liberação é individual por serviço e ação, nunca automática por categoria ou por nome.
-
-## Dados fictícios e persistência
-
-São três servidores, com serviços genéricos, incluindo um exemplo de TOTVS AppServer. O servidor da filial está sem comunicação. O conector de integrações de homologação começa com ações autorizadas para facilitar o teste.
-
-Heartbeat de 30 segundos e comunicação vencida após 90 segundos são parâmetros demonstrativos. A observação do serviço tem horário próprio. Use `/servicos <Servidor>` para consultá-la novamente. Não se guardam comandos para quando uma máquina voltar.
-
-As atualizações usam cache de seis horas, intervalo mínimo de 30 minutos e uma busca por máquina. KBs e pacotes são fictícios. A conversa separa a previsão de reinício do pacote da pendência já observada no servidor. Instalação e reinício do Windows estão desabilitados.
-
-A chave `nucleo-control-demo-v2` no `localStorage` contém apenas dados fictícios e preferências. A versão antiga do protótipo não é carregada por este modelo. **Restaurar** volta ao exemplo inicial. Se o navegador bloquear o armazenamento, a simulação funciona em memória. Datas usam `America/Sao_Paulo`.
-
-O seletor de perfis e as permissões no navegador servem à demonstração. Não são autenticação nem autorização de produção. A conversa é uma prévia local, não envia mensagens ao Telegram e não sincroniza abas ou usuários.
-
-## Estrutura
-
-```text
-src/app/                         Páginas e estilos
-src/components/screens/telegram.tsx   Conversa de operação
-src/components/screens/services.tsx   Configuração de serviços
-src/components/service-policy-dialog.tsx
-src/domain/                      Tipos, comandos e permissões
-src/data/seed.ts                 Inventário fictício
-src/services/                    Contrato e adaptador simulado
-src/lib/format.ts                Datas e mensagens
-tests/                          Testes de comandos, políticas e operações
-```
-
-O ponto de substituição da simulação por uma API é `src/services/index.ts`. Na integração real, inventário, configuração, solicitação, confirmação e resultado serão fornecidos por uma central autenticada; a execução local do mock não deve ser reproduzida no navegador.
-
-## Próxima entrega operacional
-
-Para um primeiro piloto real, a prioridade é um usuário autorizado, um servidor e o comando de reinício de um serviço aprovado, com confirmação e resultado. Em seguida entram os outros serviços e as consultas de atualização. Não é necessário construir um painel operacional completo.
-
-```text
-Operador no Telegram → Bot na central C#/.NET → pedido autorizado
-Agente Windows → consulta à API da central → executa ação → envia resultado
-Central → resultado ao operador no Telegram
-Web → configuração dos destinos e das permissões
-```
-
-O agente inicia a conexão por HTTPS; não há abertura de porta de entrada nos servidores gerenciados. A central precisa ter sua API acessível aos agentes. Bot, token, agentes e armazenamento operacional persistente ficam **fora da Vercel**. O navegador não acessa agentes nem recebe credenciais administrativas.
-
-## GitHub e Vercel
-
-Repositório: [vtrzxy/ServicesTelegram](https://github.com/vtrzxy/ServicesTelegram).
-
-Para hospedar esta demonstração na Vercel, importe o repositório, selecione Next.js, Node.js 24, instalação `npm ci` e compilação `npm run build`. Use o diretório de saída padrão. Não há variáveis de ambiente obrigatórias. A publicação não foi realizada por esta entrega.
-
-Inclua o arquivo de dependências travadas nos commits. Não envie `.next`, `node_modules`, `.local`, `.documento_tmp`, `entrega` nem arquivos `.env`.
-
-O documento Word em `documentos` registra o planejamento original. O escopo vigente deste protótipo é o descrito aqui: **Telegram para operar, web enxuta para configurar**, sem especialização em Protheus ou ERP.
+Repositório: [vtrzxy/ServicesTelegram](https://github.com/vtrzxy/ServicesTelegram). O Word em `documentos` registra o planejamento original; este README descreve o piloto atual.

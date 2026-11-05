@@ -1,4 +1,4 @@
-import { Telegram } from "@/components/screens/telegram";
+import { InventoryDashboard } from "@/components/inventory/dashboard";
 export default function Page() {
-  return <Telegram />;
+  return <InventoryDashboard />;
 }

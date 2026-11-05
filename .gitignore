@@ -13,3 +13,6 @@ test-results/
 .local/
 *.log
 entrega/
+__pycache__/
+*.pyc
+agent.json

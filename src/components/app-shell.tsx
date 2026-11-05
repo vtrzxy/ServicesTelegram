@@ -16,7 +16,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         Ir para o conteúdo
       </a>
       <header className="simple-header">
-        <Link href="/" className="simple-brand">
+        <Link href="/telegram" className="simple-brand">
           <MessageCircle size={25} />
           <div>
             <strong>ServicesTelegram</strong>
@@ -24,7 +24,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </Link>
         <nav aria-label="Navegação principal" className="simple-nav">
-          <Link href="/" aria-current={path === "/" ? "page" : undefined}>
+          <Link href="/">Inventário real</Link>
+          <Link href="/telegram" aria-current={path === "/telegram" ? "page" : undefined}>
             <MessageCircle size={16} />
             Telegram <small>prévia</small>
           </Link>

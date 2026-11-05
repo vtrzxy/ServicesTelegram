@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { DemoProvider } from "@/components/demo-provider";
-import { AppShell } from "@/components/app-shell";
+import { WorkspaceShell } from "@/components/workspace-shell";
 import "./globals.css";
 export const metadata: Metadata = {
   title: {
@@ -8,16 +7,14 @@ export const metadata: Metadata = {
     template: "%s · ServicesTelegram",
   },
   description:
-    "Operação de serviços Windows pelo Telegram, com configuração web de servidores e ações. Demonstração com dados simulados.",
+    "Inventário de serviços recebido dos agentes Windows na central local. Prévia separada da operação pelo Telegram.",
   robots: { index: false, follow: false },
 };
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="pt-BR">
       <body>
-        <DemoProvider>
-          <AppShell>{children}</AppShell>
-        </DemoProvider>
+        <WorkspaceShell>{children}</WorkspaceShell>
       </body>
     </html>
   );
